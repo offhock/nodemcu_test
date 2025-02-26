@@ -88,7 +88,7 @@ void setup() {
     irrecv.setTolerance(kTolerancePercentage);  // Override the default tolerance.
     irrecv.enableIRIn();  // Start the receiver
 
-    dht.setup(5, DHTesp::DHT11); // Connect DHT sensor to GPIO 5
+    dht.setup(5, DHTesp::AUTO_DETECT); // Connect DHT sensor to GPIO 5
 
     pinMode(D2, OUTPUT);
     digitalWrite(D2, LOW); // Switch OFF
@@ -250,9 +250,9 @@ void loop() {
             delay(1000);
             h_t = dht.getTempAndHumidity();
             retry++;
-          } while (dht.getStatus() != dht.ERROR_NONE  && retry < 5);
+          } while (dht.getStatus() != DHTesp::ERROR_NONE  && retry < 5);
 
-          if (dht.getStatus() == dht.ERROR_NONE) {              
+          if (dht.getStatus() == DHTesp::ERROR_NONE) {              
               mqttClient.publish("homeassistant/nodemcu-1/temperature", String(h_t.temperature).c_str(),true);          
               mqttClient.publish("homeassistant/nodemcu-1/humidity", String(h_t.humidity).c_str(),true);              
           } else {
