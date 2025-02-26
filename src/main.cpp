@@ -241,25 +241,38 @@ void loop() {
     } else {
       long now = millis();
       // publish temperature, counter, sin value every 60 seconds
-      if( now - lastSentTime > 60000 ) {
+      if( now - lastSentTime > 60000 || lastSentTime == 0) {
           lastSentTime = now;        
           double value = 25 * sin(2.0 * PI * count / 100);
-          double temperature = dht.getTemperature();    
-          double humidity = dht.getHumidity();          
+          TempAndHumidity h_t; 
+          int retry = 0;
+          do {
+            delay(1000);
+            h_t = dht.getTempAndHumidity();
+            retry++;
+          } while (dht.getStatus() != dht.ERROR_NONE  && retry < 5);
+
+          if (dht.getStatus() == dht.ERROR_NONE) {              
+              mqttClient.publish("homeassistant/nodemcu-1/temperature", String(h_t.temperature).c_str(),true);          
+              mqttClient.publish("homeassistant/nodemcu-1/humidity", String(h_t.humidity).c_str(),true);              
+          } else {
+              Serial.println("Error reading DHT sensor");
+          } 
+
           mqttClient.publish("homeassistant/nodemcu-1/counter", String(count).c_str(),true);
           mqttClient.publish("homeassistant/nodemcu-1/sin", String(value).c_str(),true);
-          mqttClient.publish("homeassistant/nodemcu-1/temperature", String(temperature).c_str(),true);          
-          mqttClient.publish("homeassistant/nodemcu-1/humidity", String(humidity).c_str(),true);
-          Serial.printf("Temperature: %.1f, Humidity: %.1f,  Counter: %d, Sin: %.2f\n", temperature, humidity, count, value);
+
+          Serial.printf("Temperature: %.1f, Humidity: %.1f,  Counter: %d, Sin: %.2f\n", h_t.temperature, h_t.humidity, count, value);
           count++;
       }    
 
       // subscribe switch setting every 10 seconds
-      if( now - lastSubscribedTime > 10000 ) {
+      if( now - lastSubscribedTime > 10000 || lastSubscribedTime == 0) {
           lastSubscribedTime = now;
           mqttClient.subscribe("homeassistant/nodemcu-1/switch/set");
           mqttClient.subscribe("homeassistant/nodemcu-1/remote/commands");          
       }
+
     }
 
     mqttClient.loop();
